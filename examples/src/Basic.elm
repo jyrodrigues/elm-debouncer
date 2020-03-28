@@ -12,16 +12,14 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 
-
 type alias Model =
-    { quietForOneSecond : Debouncer Msg Msg
+    { debouncer : Debouncer Msg Msg
     , messages : List String
     }
 
-
 init : ( Model, Cmd Msg )
 init =
-    ( { quietForOneSecond =
+    ( { debouncer =
             Debouncer.manual
                 |> settleWhenQuietFor (Just <| fromSeconds 1)
                 |> toDebouncer
@@ -30,25 +28,23 @@ init =
     , Cmd.none
     )
 
-
 type Msg
-    = MsgQuietForOneSecond (Debouncer.Msg Msg)
+    = DebouncerMsg (Debouncer.Msg Msg)
     | DoSomething
-
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        MsgQuietForOneSecond subMsg ->
+        DebouncerMsg subMsg ->
             let
-                ( subModel, subCmd, emittedMsg ) =
-                    Debouncer.update subMsg model.quietForOneSecond
+                ( updatedDebouncer, debouncerCmd, emittedMsg ) =
+                    Debouncer.update subMsg model.debouncer
 
                 mappedCmd =
-                    Cmd.map MsgQuietForOneSecond subCmd
+                    Cmd.map DebouncerMsg debouncerCmd
 
                 updatedModel =
-                    { model | quietForOneSecond = subModel }
+                    { model | debouncer = updatedDebouncer }
             in
             case emittedMsg of
                 Just emitted ->
@@ -63,14 +59,13 @@ update msg model =
             , Cmd.none
             )
 
-
 view : Model -> Html Msg
 view model =
     div [ style "margin" "1em" ]
         [ button
             [ DoSomething
                 |> provideInput
-                |> MsgQuietForOneSecond
+                |> DebouncerMsg
                 |> onClick
             ]
             [ text "Click here repeatedly." ]
@@ -79,7 +74,6 @@ view model =
             |> List.map (\message -> p [] [ text message ])
             |> div []
         ]
-
 
 main : Program () Model Msg
 main =
